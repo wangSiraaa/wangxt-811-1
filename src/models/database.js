@@ -6,6 +6,9 @@ class InMemoryDatabase {
     this.personnel = new Map();
     this.equipment = new Map();
     this.auditLogs = [];
+    this.subscriptions = new Map();
+    this.users = new Map();
+    this.notifications = [];
     this._initSeedData();
   }
 
@@ -63,6 +66,24 @@ class InMemoryDatabase {
       location: 'K123+000至K124+000',
       status: '正常'
     });
+    this.users.set("admin", {
+      username: "admin",
+      password: "admin123",
+      role: "管理员",
+      name: "系统管理员"
+    });
+    this.users.set("dispatcher", {
+      username: "dispatcher",
+      password: "dispatcher123",
+      role: "调度员",
+      name: "调度员王"
+    });
+    this.users.set("worker", {
+      username: "worker",
+      password: "worker123",
+      role: "信号工",
+      name: "工长张"
+    });
   }
 
   createPlan(planData) {
@@ -86,9 +107,15 @@ class InMemoryDatabase {
   updatePlan(id, updates) {
     const plan = this.plans.get(id);
     if (!plan) return null;
+    const oldStatus = plan.status;
     const updated = { ...plan, ...updates, updatedAt: new Date().toISOString() };
     this.plans.set(id, updated);
     this.addAuditLog('PLAN_UPDATED', { planId: id, updates });
+    
+    if (updates.status && updates.status !== oldStatus) {
+      this.notifySubscribers(id, oldStatus, updates.status);
+    }
+    
     return updated;
   }
 
